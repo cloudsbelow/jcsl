@@ -3,9 +3,10 @@ import * as util from '../util/util.js'
 import { GraphContext, GraphMem, Operation } from '../graph/GraphContext.js';
 
 class BasePtr extends util.BaseAsyncObj{
-  constructor(context, cb = null){
+  constructor(context, id=0, cb = null){
     super(context,cb)
     this.allocated = false;
+    this.id = id;
     this.alloccb = this.alloccb.bind(this)
   }
   alloccb(err, id){
@@ -123,6 +124,7 @@ class CudaFunc extends util.BaseAsyncObj{
           }*/
           const ptr = args[i]
           //greatly simplified via non async ids (why did I ever)
+          console.log(ptr.id)
           v.setUint32(offset, ptr.id, true)
           if(defer && !graphContext){
             if(ptr.unrest){
@@ -202,7 +204,7 @@ export class BaseCudaContext{
   constructor(cudaprocess){
     this.p = cudaprocess;
     this.p.seterrcb((data) => {
-      console.error(`stderr: ${data}`);
+      console.error(`stderr: ${new TextDecoder().decode(data)}`);
     });
     this.p.setclosecb((code) => {
       console.log(`child process closed:\n ${new TextDecoder().decode(code)}`);
@@ -214,8 +216,8 @@ export class BaseCudaContext{
 
     this.stdout = new util.StreamCache()
     this.p.setoutcb(this.stdout.enqueue);
-    this.stdout.read(BaseCudaContext.baseResponseSize, this.handleResponse)
     this.handleResponse = this.handleResponse.bind(this)
+    this.stdout.read(BaseCudaContext.baseResponseSize, this.handleResponse)
   }
   kill(){
     this.sendBuffer(8, new Uint8Array(0))
@@ -254,9 +256,10 @@ export class BaseCudaContext{
     this.p.send(util.b_cc(this.makeHeader(info, buffer.byteLength), buffer))
   }
   malloc(size,cb=null){
-    const ptr = new BasePtr(this, cb)
+    const ptrid = this.getPtrId()
+    const ptr = new BasePtr(this, ptrid, cb)
     const buf = this.makeCommand(0, ptr.alloccb, 
-      this.getPtrId(), size%4294967296, Math.floor(size/4294967296)
+      ptrid, size%4294967296, Math.floor(size/4294967296)
     ); //cursed buffer alignment
     this.sendBuffer(1,buf)
     return ptr;

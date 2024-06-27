@@ -32,7 +32,7 @@ public:
     auto pair = data.find(key);
     if(pair != data.end())
       return data.find(key)->second;
-    std::cerr << "Cannot find element corresponding to "<<key;
+    std::cerr << "Cannot find "<< typeid(T).name()<<" corresponding to "<<key;
     return 0;
   }
   T destroy(uint32_t key, bool handled = false) {
