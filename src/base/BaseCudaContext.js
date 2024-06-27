@@ -215,6 +215,7 @@ export class BaseCudaContext{
     this.stdout = new util.StreamCache()
     this.p.setoutcb(this.stdout.enqueue);
     this.stdout.read(BaseCudaContext.baseResponseSize, this.handleResponse)
+    this.handleResponse = this.handleResponse.bind(this)
   }
   kill(){
     this.sendBuffer(8, new Uint8Array(0))

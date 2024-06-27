@@ -67,16 +67,15 @@ export class GraphContext{
     this.externFuncs = new Set();
     this.externPtrs = new Set();
     this.parent = parent
-    this.memidbase = 16 //FIX THIS BEFORE OFFICIAL USAGE! THIS IS BAD BAD BAD BAD BAD TODO TODO FLAG
     this.graphDescriptor()
   }
-  cop = (type, info, deps, mod = true)=>{
+  cop(type, info, deps, mod = true){
     const op = new Operation(this.ops.length, type, info, deps)
     this.ops.push(op)
     return op
   }
   malloc=(size)=>{
-    const mem = new GraphMem(this, this.memidbase++, size)
+    const mem = new GraphMem(this, this.parent.getPtrId(), size)
     this.allocs.push(mem)
   }
   compile=()=>{
