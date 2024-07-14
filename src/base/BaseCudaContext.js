@@ -12,7 +12,7 @@ class BasePtr extends util.BaseAsyncObj{
   alloccb(err, id){
     this.id = id
     this.allocated = err == 0
-    this.settle(this)
+    this.settle()
   }
   free(cb = null){
     this.when(()=>{
@@ -55,17 +55,18 @@ class CudaFunc extends util.BaseAsyncObj{
     'i64':'setInt64', 'i32':'setInt32', 'i16':'setInt16', 'i8':'setInt8',
     'u64':'setBigUint64', 'u32':'setUint32', 'u16':'setUint16', 'u8':'setUint8',
   }
-  constructor(module, cb=null){
+  constructor(module, id, cb=null){
     super(module.ctx, cb)
     this.footprint = ['ptr', 'f32', 'u64']
     this.ptridxs = this.footprint.map((x,i)=>i).filter((i)=>this.footprint[i]=='ptr')
     this.width = this.footprint.map(x=>CudaFunc.widths[x]+2).reduce((a,b)=>a+b);
+    this.id = id;
     this.createcb = this.createcb.bind(this)
   }
 
   createcb(err, id){
-    if(err) throw Error("Error creating function")
-    this.id = id
+    if(err || (this.id!=0 && this.id!=id)) throw Error("Error creating function");
+    this.id = id;
     this.settle(this)
   }
 
@@ -76,10 +77,11 @@ class CudaFunc extends util.BaseAsyncObj{
     let depptrs = [];
     let defer = this.unrest;
     let graphContext = null;
-    for(let i=0; i<this.ptridxs.length && !defer; i++){
+    if(args[this.footprint.length] instanceof GraphContext) graphContext = args[this.footprint.length]
+    for(let i=0; i<this.ptridxs.length; i++){
       let idx = this.ptridxs[i];
       if(args[idx].ctx instanceof GraphContext){
-        graphContext = graphContext??args[idx].graphContext;
+        graphContext = graphContext??args[idx].ctx;
         if(graphContext != args[idx].ctx) throw Error("Multiple graph contexts in one func call!")
       }
       defer |= this.footprint[idx]=='ptr' && args[idx].unrest;
@@ -87,7 +89,7 @@ class CudaFunc extends util.BaseAsyncObj{
     const cb = graphContext? null:new util.Allcb(()=>{
       let buf = this.ctx.makeCommand(5, null, this.id, this.footprint.length, 0)
       this.ctx.sendBuffer(1,util.b_cc(buf, argbuf))
-      if(depptrs.length>0) depptrs.forEach(ptr=>ptr.settle())
+      if(depptrs.length>0) depptrs.forEach(ptr=>ptr.settle());
     })
 
     for(let i=0; i<this.footprint.length; i++){
@@ -98,6 +100,7 @@ class CudaFunc extends util.BaseAsyncObj{
         if(this.footprint[i] == 'ptr'){
           v.setUint16(offset-2, 0, true)
           if(!(args[i] instanceof BasePtr) && !(args[i] instanceof GraphMem)){
+            console.log(args)
             throw Error("Argument "+i+ " should be pointer")
           }
           //v.setUint32(curoffset, ptr.id, true)
@@ -124,7 +127,6 @@ class CudaFunc extends util.BaseAsyncObj{
           }*/
           const ptr = args[i]
           //greatly simplified via non async ids (why did I ever)
-          console.log(ptr.id)
           v.setUint32(offset, ptr.id, true)
           if(defer && !graphContext){
             if(ptr.unrest){
@@ -150,9 +152,10 @@ class CudaFunc extends util.BaseAsyncObj{
     }
     if(graphContext){
       if(this.unrest) graphContext.externFuncs.add(this);
-      let op = graphContext.cop(3, util.b_cc(argbuf), null, true);
+      let op = graphContext.cop(3, util.b_cc(TODOARGBUF, argbuf), null);
       for(let i=0; i<this.ptridxs.length; i++){
         if(args[this.ptridxs[i]] instanceof BasePtr) graphContext.externPtrs.add(args[this.ptridxs[i]]);
+        if(args[this.ptridxs[i]] instanceof GraphMem) args[this.ptridxs[i]].addop(op)
       }
     } else {
       this.when(cb.c)
@@ -172,9 +175,10 @@ class CudaModule extends util.BaseAsyncObj{
     this.settle()
   }
   createFunc(name, cb=null){
-    let func = new CudaFunc(this, cb)
+    const fid = this.ctx.getFuncId();
+    let func = new CudaFunc(this, fid, cb)
     this.when(()=>{
-      const buf = this.ctx.makeCommand(4, func.createcb, this.id,name.length,0);
+      const buf = this.ctx.makeCommand(4, func.createcb, this.id,name.length,fid);
       this.ctx.sendBuffer(1,util.b_cc(buf, new TextEncoder().encode(name)))
     })
     return func
@@ -212,6 +216,7 @@ export class BaseCudaContext{
     }); 
     this.commandCounter = 1;
     this.ptrCounter = 1;
+    this.funcCounter = 1;
     this.fcmds={}
 
     this.stdout = new util.StreamCache()
@@ -277,11 +282,15 @@ export class BaseCudaContext{
   }
   //We use getters instead of direct incrementation for external purposes
   //(we are not the java-type people, I swear!)
-  getCommandId(cb){ 
-    this.fcmds[++this.commandCounter] = cb;
-    return this.commandCounter
+  getCommandId(cb = null){ 
+    const cid = ++this.commandCounter
+    if(cb) this.fcmds[cid] = cb;
+    return cid
   }
   getPtrId(){
     return ++this.ptrCounter
+  }
+  getFuncId(){
+    return ++this.funcCounter
   }
 }

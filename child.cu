@@ -57,7 +57,7 @@ void createFunction(response &r, command c, char*mem){
 
   CUfunction kernelFunc;
   r.err = CUDA_SAFE_CALL(cuModuleGetFunction(&kernelFunc, Globals::modules.get(c.arg1), funcname));
-  r.res = Globals::functions.add(kernelFunc);
+  r.res = Globals::functions.add(kernelFunc, c.arg3);
   free(funcname);
 }
 void callFunction(response &r, command c, char* mem){

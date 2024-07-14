@@ -9,15 +9,17 @@ const commands = {
 }
 
 export class Operation{
-  constructor(idx, type, info, deps){
+  constructor(idx, type, info, deps = null){
     this.idx = idx;
     this.type = type
     this.info = info
     this.deps = deps??[]
     this.offset = 0
   }
-  adddep = dep=>this.deps.push(dep.idx);
-  toBuf = (offset)=>{
+  adddep(dep){
+    this.deps.push(dep.idx);
+  }
+  toBuf(offset){
     this.offset = offset;
     const header = new Uint32Array(2+this.deps.length)
     header[0] = this.type;
@@ -32,25 +34,29 @@ export class GraphMem{
   //this enforces graph order operations THE OTHER DOES NOT (!Important!)
   constructor(context, id, size, deps = null){
     this.ctx = context;
-    this.ops = [new Operation("createPlaceholder", deps, true)]
+    let buf = new Uint8Array(12);
+    const v = new DataView(buf.buffer)
+    v.setUint32(0,id,true);
+    v.setBigUint64(4,BigInt(size),true);
+    this.ops = [this.ctx.cop(commands.alloc, buf, deps)]
     this.lastmodidx = 0;
     this.freed = false;
     this.id = id;
     this.size = size;
   }
-  addop=(op, mod = true)=>{
+  addop(op, mod = true){
     if(!mod){
       op.adddep(this.ops[this.lastmodidx])
       this.ops.push(op)
     }
     if(mod){
       for(this.lastmodidx; this.lastmodidx<this.ops.length; this.lastmodidx++){
-        op.adddep(this.ops[i])
+        op.adddep(this.ops[this.lastmodidx])
       }
       this.ops.push(op)
     }
   }
-  free=()=>{
+  free(){
     if(this.freed) return;
     let freeOp = this.ctx.cop(commands.free, new Uint32Array([this.id]), null, true)
     this.addop(freeOp)
@@ -67,20 +73,20 @@ export class GraphContext{
     this.externFuncs = new Set();
     this.externPtrs = new Set();
     this.parent = parent
-    this.graphDescriptor()
   }
-  cop(type, info, deps, mod = true){
+  cop(type, info, deps){
     const op = new Operation(this.ops.length, type, info, deps)
     this.ops.push(op)
     return op
   }
-  malloc=(size)=>{
+  malloc(size){
     const mem = new GraphMem(this, this.parent.getPtrId(), size)
     this.allocs.push(mem)
+    return mem;
   }
-  compile=()=>{
+  compile(){
     this.allocs.forEach(mem=>mem.free())
-    offset = 16;
+    let offset = 16;
     const comps = this.ops.map(op=>{
       const buf = op.toBuf(offset)
       offset += buf.byteLength

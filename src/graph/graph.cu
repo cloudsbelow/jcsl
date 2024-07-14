@@ -18,7 +18,7 @@ namespace GraphThings{
         //Bytesize - 8
       //Free: (4)
         //ptr ID - 4
-      //Kernel (8+variable)
+      //Kernel (24+variable)
         //func ID - 4
         //numargs - 4
         //Blockdim (4,2,2)
@@ -69,9 +69,9 @@ namespace GraphThings{
 
     cudaKernelNodeParams callParams = {0};
     callParams.func = Globals::functions.get(funcid);
-    callParams.blockDim = dim3(*(int*)*mem, *(uint16_t*)(*mem+4), *(uint16_t*)(*mem+4));
+    callParams.blockDim = dim3(*(uint32_t*)*mem, *(uint16_t*)(*mem+4), *(uint16_t*)(*mem+6));
     *mem += 8;
-    callParams.gridDim = dim3(*(int*)*mem, *(uint16_t*)(*mem+4), *(uint16_t*)(*mem+4));
+    callParams.gridDim = dim3(*(uint32_t*)*mem, *(uint16_t*)(*mem+4), *(uint16_t*)(*mem+6));
     *mem += 8;
     callParams.sharedMemBytes = 0;
     callParams.extra = NULL;
