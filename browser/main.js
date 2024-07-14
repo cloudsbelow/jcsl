@@ -2,7 +2,7 @@
 
 
 
-const c = new jcsl.BaseCudaContext(new jcsl.su.RProcessClient('r/'+Date.now()))
+const c = new jcsl.BaseCudaContext(new jcsl.RProcessClient('r/'+Date.now()))
 window.addEventListener('beforeunload', ()=>{c.kill()})
 const files = new jcsl.su.FileContextRemote('f')
 const file = new jcsl.PTXFile(files, 'test.ptx')
