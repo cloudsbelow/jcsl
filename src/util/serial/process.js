@@ -1,4 +1,5 @@
-import * as util from './util.js'
+import * as util from './../util.js'
+import { RequestFactory } from './genericreq.js'
 
 export class CProcess extends util.BaseAsyncObj{
   constructor(path, cb){
@@ -44,7 +45,12 @@ export class RProcessClient extends util.BaseAsyncObj{
   constructor(url,cb){ //This would be a (really) good place to use sockets BUT I DUNNO HOW SO POLLING HERE WE GO
     super(null, cb)
     this.url=url;
-    const xhr = new XMLHttpRequest();
+    this.connection = new RequestFactory(this.url)
+    this.connection.send('/open', 'GET', ()=>{
+      console.log("connection established: "+this.url)
+      this.settle()
+    })
+    /*const xhr = new XMLHttpRequest();
     xhr.onreadystatechange = (stat)=>{
       //console.log(stat, this)
       if(xhr.status === 200 && xhr.readyState === XMLHttpRequest.DONE){
@@ -54,10 +60,15 @@ export class RProcessClient extends util.BaseAsyncObj{
     }
     xhr.open('GET',this.url+"/open")
     xhr.send()
-    //console.log("h")
+    //console.log("h")*/
   }
   poll=(end, cb)=>{
-    const xhr = new XMLHttpRequest();
+    this.connection.send(end, 'GET', (data)=>{
+      cb(data)
+      this.poll(end, cb)
+    })
+
+    /*const xhr = new XMLHttpRequest();
     xhr.timeout = 0;
     xhr.responseType = "arraybuffer"
     xhr.onreadystatechange = ()=>{
@@ -70,7 +81,7 @@ export class RProcessClient extends util.BaseAsyncObj{
       }
     }
     xhr.open('GET',this.url+end)
-    xhr.send()
+    xhr.send()*/
   }
   setoutcb=(cb)=>{
     this.when(()=>this.poll('/out', cb))
@@ -82,7 +93,8 @@ export class RProcessClient extends util.BaseAsyncObj{
     this.when(()=>this.poll('/close',cb))
   }
   send(data){
-    const xhr = new XMLHttpRequest();
+    this.connection.send('/in','PUT',()=>{},data)
+    /*const xhr = new XMLHttpRequest();
     xhr.onreadystatechange = ()=>{
       if(xhr.readyState === XMLHttpRequest.DONE){
         if(xhr.status === 200) {
@@ -91,7 +103,7 @@ export class RProcessClient extends util.BaseAsyncObj{
     };
     xhr.open("PUT", this.url+"/in");
     xhr.setRequestHeader("Content-Type", "application/octet-stream");
-    this.when(()=>xhr.send(data));
+    this.when(()=>xhr.send(data));*/
   }
 }
 

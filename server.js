@@ -1,6 +1,11 @@
 import fs from 'fs'
 import http from 'http'
+import * as suProcess from './src/util/serial/process.js'
 import * as su from './src/util/SerialUtils.js'
+import { parsecmd } from './src/util/miscparsing.js'
+
+const cmdArgs = parsecmd(process.argv);
+console.log(cmdArgs)
 
 const contentTypes = {
   '.html': 'text/html',
@@ -27,7 +32,11 @@ const server = http.createServer((req, res) => {
   if(spath[1]=='r'){
     if(processes[spath[2]] == undefined && spath[3]=='open'){
       console.log("Opening new process with id: "+spath[2])
-      processes[spath[2]] = new su.RProcessServer(spath[2],"./build/child.exe",()=>{
+      processes[spath[2]] = new suProcess.RProcessServer(spath[2],(
+        cmdArgs.r?
+        new suProcess.RProcessClient(cmdArgs.r+'/r/'+spath[2]):
+        new suProcess.CProcess("./build/child.exe")
+      ),()=>{
         console.log(Object.keys(processes).length+ " processes currently open")
         res.writeHead(200, "success")
         return res.end()

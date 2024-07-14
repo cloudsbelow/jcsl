@@ -147,4 +147,7 @@ export class StreamCache{
       this.waitlast = link
     }
   }
+  empty(){
+    return this.enqueued == 0;
+  }
 }
