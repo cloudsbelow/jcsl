@@ -60,6 +60,7 @@ export class Queue{
 
 export class BaseAsyncObj{
   constructor(context, cb = null){
+    if(cb && typeof cb != 'function') throw new Error("pass nonfunction");
     this.onSettle = new Queue()
     if(cb) this.onSettle.enqueue(cb)
     this.ctx = context
@@ -80,6 +81,7 @@ export class BaseAsyncObj{
     if(this.unrest == 0){
       fn(this)
     } else {
+      if(typeof fn != 'function') throw new Error("pass nonfunction");
       this.onSettle.enqueue(fn)
     }
     return this;

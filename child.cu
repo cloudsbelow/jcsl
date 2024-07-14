@@ -77,7 +77,7 @@ void callFunction(response &r, command c, char* mem){
     }
   }
   r.err = CUDA_SAFE_CALL(cuLaunchKernel(Globals::functions.get(c.arg1), 10,1,1, 32,1,1, 0, NULL, args, NULL));
-
+  //cudaDeviceSynchronize();
   free(args);
   free(ptrs);
 }

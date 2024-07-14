@@ -212,7 +212,7 @@ export class BaseCudaContext{
     });
     this.p.setclosecb((code) => {
       console.log(`child process closed:\n ${new TextDecoder().decode(code)}`);
-      this.p.cleanup() //implement this with proper handling of dangling requests
+      //TODO: this.p.cleanup() //implement this with proper handling of dangling requests
     }); 
     this.commandCounter = 1;
     this.ptrCounter = 1;
@@ -228,9 +228,13 @@ export class BaseCudaContext{
     this.sendBuffer(8, new Uint8Array(0))
   }
   handleResponse(data){
+    console.log(data);
     const v = new DataView(new Uint8Array(data).buffer);
     const cid = v.getBigUint64(0,true);
-    if(this.fcmds[cid]===undefined) return
+    if(this.fcmds[cid]===undefined){
+      this.stdout.read(BaseCudaContext.baseResponseSize, this.handleResponse)
+      return
+    }
     this.fcmds[cid]?.(v.getUint32(8,true),v.getUint32(12,true))
     delete this.fcmds[cid]
     this.stdout.read(BaseCudaContext.baseResponseSize, this.handleResponse)
