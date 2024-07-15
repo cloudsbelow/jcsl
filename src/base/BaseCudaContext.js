@@ -27,7 +27,7 @@ class BasePtr extends util.BaseAsyncObj{
         this.ctx.gatherNext(res, cb)
       }, this.id, N, offset)
       this.ctx.sendBuffer(1, buf)
-    })
+    }, "get")
   }
   set(data, offset=0, cb=null){
     this.when(()=>{
@@ -36,7 +36,7 @@ class BasePtr extends util.BaseAsyncObj{
         cb?.()
       }, this.id, data.byteLength, offset)
       this.ctx.sendBuffer(1,util.b_cc(buf, data))
-    })
+    }, "set")
   }
 }
 
@@ -91,7 +91,7 @@ class CudaFunc extends util.BaseAsyncObj{
       this.ctx.sendBuffer(1,util.b_cc(buf, argbuf))
       if(depptrs.length>0) depptrs.forEach(ptr=>ptr.settle());
     })
-
+    
     for(let i=0; i<this.footprint.length; i++){
       const argw = CudaFunc.widths[this.footprint[i]]
       if(argw){
@@ -136,7 +136,7 @@ class CudaFunc extends util.BaseAsyncObj{
                   depptrs.push(ptr)
                   ptr.unsettle()
                 }
-              })
+              }, "function")
             } else {
               depptrs.push(ptr)
               ptr.unsettle()

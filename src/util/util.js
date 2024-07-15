@@ -77,12 +77,13 @@ export class BaseAsyncObj{
   unsettle(){
     this.unrest++
   }
-  when(fn){
+  when(fn, label=undefined){
     if(this.unrest == 0){
       fn(this)
     } else {
       if(typeof fn != 'function') throw new Error("pass nonfunction");
       this.onSettle.enqueue(fn)
+      if(label)this.onSettle.last.label=label;
     }
     return this;
   }
