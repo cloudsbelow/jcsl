@@ -152,3 +152,45 @@ export class StreamCache{
     return this.enqueued == 0;
   }
 }
+
+export class Flushable{
+  constructor(delay = 200){
+    this.bufs = []
+    this.enqueued = 0
+    this.enqueue = this.enqueue.bind(this)
+    this.flushfn = null;
+    this.interv = null;
+    this.delay = delay;
+  }
+  enqueue(buf){
+    this.bufs.push(buf)
+    this.enqueued+=buf.byteLength;
+    this.fl()
+  }
+  dump(){
+    let c = new Uint8Array(this.enqueued);
+    let offset = 0;
+    this.bufs.forEach((buf)=>{
+      c.set(buf, offset)
+      offset += buf.byteLength
+    })
+    this.bufs=[]
+    this.enqueued=0
+    return c
+  }
+  fl(delay){
+    if(!this.interv && this.flushfn && this.enqueued>0){
+      this.interv = setInterval(() => {
+        const m = this.dump()
+        console.log("flushing", m);
+        this.flushfn()
+        this.flushfn = null;
+        this.interv = null;
+      }, delay??this.delay);
+    }
+  }
+  flush(fn, ms=200){
+    this.flushfn = fn;
+    this.fl(ms)
+  }
+}

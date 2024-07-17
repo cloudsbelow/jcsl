@@ -12,7 +12,8 @@ export class CProcess extends util.BaseAsyncObj{
       //(and this object is never unsettled)
       //I feel as though leaving this through the gc would be
       //excessive for some reason I can't quite describe...
-      this.send = this.p.stdin.write 
+      //turns out this doesn't work now for some reason? cool.
+      //this.send = this.p.stdin.write 
       this.settle()
     })
   }
@@ -50,6 +51,13 @@ export class RProcessClient extends util.BaseAsyncObj{
       console.log("connection established: "+this.url)
       this.settle()
     })
+    this.sendbuffer = new util.Flushable()
+    this.flfn = (data)=>{
+      this.connection.send('/in','PUT',()=>{
+        this.sendbuffer.flush(flfn)
+      },data)
+    }
+    this.sendbuffer.flush(flfn)
     /*const xhr = new XMLHttpRequest();
     xhr.onreadystatechange = (stat)=>{
       //console.log(stat, this)
@@ -93,7 +101,9 @@ export class RProcessClient extends util.BaseAsyncObj{
     this.when(()=>this.poll('/close',cb))
   }
   send(data){
-    this.connection.send('/in','PUT',()=>{},data)
+    //this.connection.send('/in','PUT',()=>{},data)
+    if(!(data instanceof Uint8Array)) throw Error();
+    this.sendbuffer.enqueue(data);
     /*const xhr = new XMLHttpRequest();
     xhr.onreadystatechange = ()=>{
       if(xhr.readyState === XMLHttpRequest.DONE){

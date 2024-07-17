@@ -60,6 +60,6 @@ export class RequestFactory extends util.BaseAsyncObj{
     }
   }
   send(path, method, cb, data = undefined){
-    this.when(()=>this.send(path+"/"+this.counter, method, cb, data))
+    this.when(()=>this.send(path, method, cb, data))
   }
 }
