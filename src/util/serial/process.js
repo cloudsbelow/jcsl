@@ -52,7 +52,7 @@ export class RProcessClient extends util.BaseAsyncObj{
       this.settle()
     })
     this.sendbuffer = new util.Flushable()
-    this.flfn = (data)=>{
+    const flfn = (data)=>{
       this.connection.send('/in','PUT',()=>{
         this.sendbuffer.flush(flfn)
       },data)

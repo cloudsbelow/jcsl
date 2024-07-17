@@ -180,16 +180,15 @@ export class Flushable{
   }
   fl(delay){
     if(!this.interv && this.flushfn && this.enqueued>0){
-      this.interv = setInterval(() => {
+      this.interv = setTimeout(() => {
         const m = this.dump()
-        console.log("flushing", m);
-        this.flushfn()
+        this.flushfn(m)
         this.flushfn = null;
         this.interv = null;
       }, delay??this.delay);
     }
   }
-  flush(fn, ms=200){
+  flush(fn, ms=undefined){
     this.flushfn = fn;
     this.fl(ms)
   }

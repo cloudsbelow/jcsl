@@ -228,7 +228,6 @@ export class BaseCudaContext{
     this.sendBuffer(8, new Uint8Array(0))
   }
   handleResponse(data){
-    console.log(data);
     const v = new DataView(new Uint8Array(data).buffer);
     const cid = v.getBigUint64(0,true);
     if(this.fcmds[cid]===undefined){
